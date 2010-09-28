@@ -1,4 +1,6 @@
-//// $Id$
+//// $Id: redirect.js 294 2009-11-11 07:59:43Z einar@einaregilsson.com $
+
+var EXPORTED_SYMBOLS = ['Redirect'];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 

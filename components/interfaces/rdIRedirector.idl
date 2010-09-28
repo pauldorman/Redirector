@@ -10,13 +10,11 @@ interface rdIRedirector : nsISupports {
 	readonly attribute short redirectCount;
 	
 	void addRedirect(in rdIRedirect redirect);
-	void debug(in wstring msg);
 	void deleteRedirectAt(in short index);
 	void exportRedirects(in nsIFile file);
 	rdIRedirect getRedirectAt(in short index);
 	wstring getRedirectUrl(in wstring url);
 	long importRedirects(in nsIFile file);
-	void reload();
 	void save();
 	void switchItems(in short index1, in short index2);
 };

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- $Id$ -->
+<!-- $Id: settings.xul 304 2009-11-14 06:36:38Z einar@einaregilsson.com $ -->
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://redirector/skin/redirector.css" type="text/css"?>
 
@@ -16,9 +16,7 @@
 		xmlns:nc="http://home.netscape.com/NC-rdf#"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-	<script type="application/x-javascript" src="../code/redirectorprefs.js"/>
-	<script type="application/x-javascript" src="../code/redirect.js"/>
-	<script type="application/x-javascript" src="../code/settings.xul.js"/>
+	<script type="application/x-javascript" src="settings.xul.js"/>
 	<stringbundleset id="stringbundleset">
 		<stringbundle id="redirector-strings" src="chrome://redirector/locale/redirector.properties"/>
 	</stringbundleset>
@@ -111,7 +109,7 @@
 				</groupbox>
 			</tabpanel>
 			<tabpanel>
-				<browser type="content" src="chrome://redirector/content/ui/help.html" flex="1" />
+				<browser type="content" src="chrome://redirector/content/help.html" flex="1" />
 			</tabpanel>
 		</tabpanels>
 	</tabbox>

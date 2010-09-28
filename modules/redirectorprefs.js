@@ -1,4 +1,6 @@
-// $Id$
+// $Id: redirectorprefs.js 304 2009-11-14 06:36:38Z einar@einaregilsson.com $
+
+var EXPORTED_SYMBOLS = ['RedirectorPrefs'];
 
 function RedirectorPrefs() {
 	this.init();	
@@ -11,7 +13,6 @@ RedirectorPrefs.prototype = {
 	_enabled : null,
 	_showStatusBarIcon : null,
 	_showContextMenu : null,
-	_debugEnabled : null,
 	_defaultDir : null,
 	_redirects : null,
 	
@@ -33,9 +34,6 @@ RedirectorPrefs.prototype = {
 	get showContextMenu() { return this._showContextMenu; },
 	set showContextMenu(value) { this._prefBranch.setBoolPref('showContextMenu', value); },
 		
-	get debugEnabled() { return this._debugEnabled; },
-	set debugEnabled(value) { this._prefBranch.setBoolPref('debugEnabled', value); },
-
 	get defaultDir() { return this._defaultDir; },
 	set defaultDir(value) { this._prefBranch.setCharPref('defaultDir', value); },
 
@@ -59,7 +57,6 @@ RedirectorPrefs.prototype = {
 		this._enabled = this._prefBranch.getBoolPref('enabled');
 		this._showStatusBarIcon = this._prefBranch.getBoolPref('showStatusBarIcon');
 		this._showContextMenu = this._prefBranch.getBoolPref('showContextMenu');
-		this._debugEnabled = this._prefBranch.getBoolPref('debugEnabled');
 		this._defaultDir = this._prefBranch.getCharPref('defaultDir');
 		this._redirects = this._prefBranch.getCharPref('redirects');
 	},

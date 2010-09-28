@@ -1,6 +1,9 @@
-//// $Id$
+//// $Id: browserOverlay.xul.js 304 2009-11-14 06:36:38Z einar@einaregilsson.com $
 
 var Redirector = Components.classes["@einaregilsson.com/redirector;1"].getService(Components.interfaces.rdIRedirector);
+Components.utils.import("resource://redirector-modules/utils.js");
+Components.utils.import("resource://redirector-modules/redirectorprefs.js");
+Components.utils.import("resource://redirector-modules/redirect.js");
 
 var RedirectorOverlay = {
 
@@ -29,7 +32,7 @@ var RedirectorOverlay = {
 	
 	onUnload : function(event) {
 		this.prefs.dispose();
-		Redirector.debug("Finished cleanup");
+		log.debug("Finished cleanup");
 	},
 
 	changedPrefs : function(prefs) {
@@ -62,7 +65,7 @@ var RedirectorOverlay = {
 		}
 
 		var args = { saved : false, 'redirect' : redirect };
-		window.openDialog("chrome://redirector/content/ui/editRedirect.xul", "redirect", "chrome,dialog,modal,centerscreen", args);
+		window.openDialog("chrome://redirector/content/editRedirect.xul", "redirect", "chrome,dialog,modal,centerscreen", args);
 		if (args.saved) {
 			Redirector.addRedirect(args.redirect);
 		}
@@ -78,12 +81,11 @@ var RedirectorOverlay = {
 
 	openSettings : function() {
 		var windowName = "redirectorSettings";
-		var windowsMediator = Components.classes["@mozilla.org/appshell/window-mediator;1"].getService(Components.interfaces.nsIWindowMediator);
-		var win = windowsMediator.getMostRecentWindow(windowName);
+		var win = WindowMediator.getMostRecentWindow(windowName);
 		if (win) {
 			win.focus();
 		} else {
-			window.openDialog("chrome://redirector/content/ui/settings.xul",
+			window.openDialog("chrome://redirector/content/settings.xul",
 					windowName,
 					"chrome,dialog,resizable=yes,centerscreen", this);
 		}
