@@ -1,19 +1,5 @@
 //// $Id$
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-Components.utils.import("resource://redirector-modules/utils.js");
-Components.utils.import("resource://redirector-modules/redirectorprefs.js");
-Components.utils.import("resource://redirector-modules/redirect.js");
-
-
-//// $Id$
-
-
-function Redirector() {
-	this._init();
-}
-Redirector.instance = null; //Here we'll keep the singleton instance
-
 Redirector.prototype = {
 	
 	//rdIRedirector implementation
@@ -41,67 +27,26 @@ Redirector.prototype = {
 		this.save();
 	},
 
-	/* this function is called when we receive a new connection */
-	onSocketAccepted: function(serverSocket, clientSocket)
-	{
-		log.debug('Accepted connection on ' + clientSocket.host+":"+clientSocket.port+"\n");
-
-		var input = clientSocket.openInputStream(nsITransport.OPEN_BLOCKING, 0, 0);
-		var output = clientSocket.openOutputStream(nsITransport.OPEN_BLOCKING, 0, 0);
-		var sin = new ScriptableInputStream(input);
-		while (sin.available() > 0) {
-			sin.read(512);
+	debug : function(msg) {
+		if (this._prefs.debugEnabled) {
+			this._cout.logStringMessage('REDIRECTOR: ' + msg);
 		}
-
-		const fixedResponse =
-		"HTTP/1.0 302 Moved Temporarily\r\nLocation: http://mbl.is\r\n\r\nFooooopy!!\r\n";
-		var response = fixedResponse + "\r\n" + new Date().toString() + "\r\n";
-		var n = output.write(response, response.length);
-		log.debug("Wrote "+n+" bytes\n");
-
-		input.close();
-		output.close();
 	},
-
-	onStopListening: function(serverSocket, status) {
-		log.debug(">>> shutting down server socket\n");
-	},
-
-	startListening: function() {
-		log.debug('Start listening...');
-		var socket = new ServerSocket(5555, true /* loopback only */, 5);
-		log.debug("Listening on port "+socket.port+"\n");
-		socket.asyncListen(this);
-	},
-
-    proxyFilter : {
-
-        register : function() {
-            ProtocolProxyService.registerFilter(this, 0);
-        },
-        
-        unregister : function() {
-            ProtocolProxyService.unregisterFilter(this);
-        },
-
-        applyFilter : function(service, uri, proxy) {
-            return proxy;
-        }
-    },
-
+	
 	deleteRedirectAt : function(index) {
 		this._list.splice(index, 1);
 		this.save();
 	},
 	
 	exportRedirects : function(file) {
+		var fileStream = Cc["@mozilla.org/network/file-output-stream;1"].createInstance(Ci.nsIFileOutputStream);
 		const PR_WRONLY 	 = 0x02;
 		const PR_CREATE_FILE = 0x08;
 		const PR_TRUNCATE	 = 0x20;
 
-		var fileStream = new FileOutputStream(file, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE, 0644, 0);
-
-		var stream = new ConverterOutputStream(fileStream, "UTF-8", 16384, nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
+		fileStream.init(file, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE, 0644, 0);
+		var stream = Cc["@mozilla.org/intl/converter-output-stream;1"].createInstance(Ci.nsIConverterOutputStream);
+		stream.init(fileStream, "UTF-8", 16384, Ci.nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
 		stream.writeString(this._redirectsAsString('\n'));
 		stream.close();
 	},
@@ -113,14 +58,14 @@ Redirector.prototype = {
 	//Get the redirect url for the given url. This will not check if we are enabled, and
 	//not do any verification on the url, just assume that it is a good string url that is for http/s
 	getRedirectUrl : function(url) {
-		log.debug("Checking " + url);
+		this.debug("Checking " + url);
 		
 		for each (var redirect in this._list) {
 			var result = redirect.getMatch(url);
 			if (result.isExcludeMatch) {
-				log.debug(url + ' matched exclude pattern ' + redirect.excludePattern + ' so the redirect ' + redirect.includePattern + ' will not be used');
+				this.debug(url + ' matched exclude pattern ' + redirect.excludePattern + ' so the redirect ' + redirect.includePattern + ' will not be used');
 			} else if (result.isDisabledMatch) {
-				log.debug(url + ' matched pattern ' + redirect.includePattern + ' but the redirect is disabled');
+				this.debug(url + ' matched pattern ' + redirect.includePattern + ' but the redirect is disabled');
 			} else if (result.isMatch) {
 				redirectUrl = this._makeAbsoluteUrl(url, result.redirectTo);
 				
@@ -129,12 +74,12 @@ Redirector.prototype = {
 				if (result.isMatch) {
 					var title = this._getString('invalidRedirectTitle');
 					var msg = this._getFormattedString('invalidRedirectText', [redirect.includePattern, url, redirectUrl]);
-					log.debug(msg);
+					this.debug(msg);
 					redirect.disabled = true;
 					this.save();					
-					PromptService.alert(null, title, msg);
+					this._msgBox(title, msg);
 				} else {
-					log.debug('Redirecting ' + url + ' to ' + redirectUrl);
+					this.debug('Redirecting ' + url + ' to ' + redirectUrl);
 					return redirectUrl;
 				}
 			}
@@ -143,10 +88,12 @@ Redirector.prototype = {
 	},
 	
 	importRedirects : function(file) {
-		var fileStream = new FileInputStream(file, 0x01, 0444, 0); //TODO: Find the actual constants for these magic numbers
+		var fileStream = Cc["@mozilla.org/network/file-input-stream;1"].createInstance(Ci.nsIFileInputStream);
+		fileStream.init(file, 0x01, 0444, 0); //TODO: Find the actual constants for these magic numbers
 
-		var stream = new ConverterInputStream(fileStream, "UTF-8", 16384, nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
-		stream = stream.QueryInterface(nsIUnicharLineInputStream);
+		var stream = Cc["@mozilla.org/intl/converter-input-stream;1"].createInstance(Ci.nsIConverterInputStream);
+		stream.init(fileStream, "UTF-8", 16384, Ci.nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
+		stream = stream.QueryInterface(Ci.nsIUnicharLineInputStream);
 
 		var importCount = 0, existsCount = 0;
 		var lines = [];
@@ -168,6 +115,19 @@ Redirector.prototype = {
 		return importCount | (existsCount << 16);
 	},
 	
+	reload : function() {
+		loader.loadSubScript('chrome://redirector/content/code/redirector.prototype.js');
+		loader.loadSubScript('chrome://redirector/content/code/redirect.js');
+		var oldEnabled = this.enabled;
+		for (var key in Redirector.prototype) {
+			if (key != 'redirectCount' && key != 'enabled') {
+				this[key] = Redirector.prototype[key];
+			}
+		}
+		this._init();
+		this.enabled = oldEnabled;
+	}, 
+	
 	save : function() {
 		this._prefs.redirects = this._redirectsAsString(':::');
 	},
@@ -180,42 +140,44 @@ Redirector.prototype = {
 	},
 	
 	//End rdIRedirector    
-
+	
 	// nsIContentPolicy implementation
 	shouldLoad: function(contentType, contentLocation, requestOrigin, aContext, mimeTypeGuess, extra) {
+		rdump('nsIContentPolicy::ShouldLoad ' + contentLocation.spec);
 		try {
 			//This is also done in getRedirectUrl, but we want to exit as quickly as possible for performance
 			if (!this._prefs.enabled) {
-				return nsIContentPolicy.ACCEPT;
+				return Ci.nsIContentPolicy.ACCEPT;
 			}
 			
-			if (contentType != nsIContentPolicy.TYPE_DOCUMENT) {
-				return nsIContentPolicy.ACCEPT;
+			if (contentType != Ci.nsIContentPolicy.TYPE_DOCUMENT) {
+				return Ci.nsIContentPolicy.ACCEPT;
 			}
 
 			if (contentLocation.scheme != "http" && contentLocation.scheme != "https") {
-				return nsIContentPolicy.ACCEPT;
+				return Ci.nsIContentPolicy.ACCEPT;
 			}
 			
 			if (!aContext || !aContext.loadURI) {
-				return nsIContentPolicy.ACCEPT;
+				return Ci.nsIContentPolicy.ACCEPT;
 			}
 			
 			var redirectUrl = this.getRedirectUrl(contentLocation.spec);
 
 			if (!redirectUrl) {
-				return nsIContentPolicy.ACCEPT;
+				return Ci.nsIContentPolicy.ACCEPT;
 			}			
 
 			aContext.loadURI(redirectUrl, requestOrigin, null);
-			return nsIContentPolicy.REJECT_REQUEST;
+			return Ci.nsIContentPolicy.REJECT_REQUEST;
 		} catch(e) {
-			log.error(e);	 
+			this.debug(e);	 
 		}
+		
 	},
 	
 	shouldProcess: function(contentType, contentLocation, requestOrigin, insecNode, mimeType, extra) {
-		return nsIContentPolicy.ACCEPT;
+		return Ci.nsIContentPolicy.ACCEPT;
 	},
 	//end nsIContentPolicy
 
@@ -231,8 +193,9 @@ Redirector.prototype = {
 	{
 		try {
 			let newLocation = newChannel.URI.spec;
+			rdump('nsIChannelEventSink::onChannelRedirect ' + newLocation);
 
-			if (!(newChannel.loadFlags & nsIChannel.LOAD_DOCUMENT_URI)) {
+			if (!(newChannel.loadFlags & Ci.nsIChannel.LOAD_DOCUMENT_URI)) {
 				//We only redirect documents...
 				return; 
 			}
@@ -256,8 +219,8 @@ Redirector.prototype = {
 			for each (let callback in callbacks)
 			{
 				try {
-					win = callback.getInterface(nsILoadContext).associatedWindow;
-					webNav = win.QueryInterface(nsIInterfaceRequestor).getInterface(nsIWebNavigation);
+					win = callback.getInterface(Ci.nsILoadContext).associatedWindow;
+					webNav = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIWebNavigation);
 					break;
 				} catch(e) {}
 			}
@@ -273,7 +236,7 @@ Redirector.prototype = {
 			
 		} catch (e if (e != Cr.NS_BASE_STREAM_WOULD_BLOCK)) {
 			// We shouldn't throw exceptions here - this will prevent the redirect.
-			log.error("Unexpected error in onChannelRedirect: " + e + "\n");
+			dump("Redirector: Unexpected error in onChannelRedirect: " + e + "\n");
 		}
 	},
 	//end nsIChannelEventSink
@@ -283,18 +246,19 @@ Redirector.prototype = {
 	_prefs : null,
 	_list : null,
 	_strings : null,
+	_cout : Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService),
 
 	_init : function() {
 		if (this._prefs) {
 			this._prefs.dispose();
 		}
-		log.info('Redirector created!');
+		this._cout.logStringMessage('REDIRECTOR CREATED');
 		this._prefs = new RedirectorPrefs();
 		//Check if we need to update existing redirects
 		var data = this._prefs.redirects;
 		var version = this._prefs.version;
 		this._loadStrings();
-		var currentVersion = '3.0';
+		var currentVersion = '2.5';
 		//Here update checks are handled
 		if (version == 'undefined') { //Either a fresh install of Redirector, or first time install of v2.0
 			if (data) { //There is some data in redirects, we are upgrading from a previous version, need to upgrade data
@@ -311,7 +275,7 @@ Redirector.prototype = {
 				this._prefs.redirects = newArr.join(':::');
 			}
 			this._prefs.version = currentVersion;
-		} else {
+		} else if (version == '2.0' || version == '2.0.1' || version == '2.0.2') {
 			this._prefs.version = currentVersion;
 		}
 		//Update finished
@@ -327,14 +291,14 @@ Redirector.prototype = {
 				this._list.push(redirect);
 			}
 		}
-		this.startListening();
-		this.proxyFilter.register();
 	},
 	
 	_loadStrings : function() {
 		var src = 'chrome://redirector/locale/redirector.properties';
-		var appLocale = LocaleService.getApplicationLocale();
-		this._strings = StringBundleService.createBundle(src, appLocale);	 
+		var localeService = Cc["@mozilla.org/intl/nslocaleservice;1"].getService(Ci.nsILocaleService);
+		var appLocale = localeService.getApplicationLocale();
+		var stringBundleService = Cc["@mozilla.org/intl/stringbundle;1"].getService(Ci.nsIStringBundleService);
+		this._strings = stringBundleService.createBundle(src, appLocale);	 
 	},	  
 
 	_redirectsAsString : function(seperator) {
@@ -359,37 +323,21 @@ Redirector.prototype = {
 		return this._strings.formatStringFromName(name, params, params.length);
 	},
 	
+	_msgBox : function(title, text) {
+		Cc["@mozilla.org/embedcomp/prompt-service;1"]
+			.getService(Ci.nsIPromptService)
+				.alert(null, title, text);
+	},
+
 	_makeAbsoluteUrl : function(currentUrl, relativeUrl) {
 		
 		if (relativeUrl.match(/https?:/)) {
 			return relativeUrl;
 		} 
 		
-		var uri = IOService.newURI(currentUrl, null, null); 
+		var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+		var uri = ioService.newURI(currentUrl, null, null); 
+		
 		return uri.resolve(relativeUrl);
-	},
-	
-	//XPCOM Registration
-	classDescription 	: "Redirector Component",
-	classID				: Components.ID("{b7a7a54f-0581-47ff-b086-d6920cb7a3f7}"),
-	contractID			: "@einaregilsson.com/redirector;1",
-	_xpcom_categories 	: [{category:'content-policy'},{category:'net-channel-event-sinks'}],
-	QueryInterface		: XPCOMUtils.generateQI([nsIContentPolicy, nsIChannelEventSink, rdIRedirector]),
-	_xpcom_factory		: {
-		createInstance: function(outer, iid) {
-			if (outer) throw Cr.NS_ERROR_NO_AGGREGATION;
-			if (!Redirector.instance) {
-				log.debug('Creating new instance of Redirector');
-				Redirector.instance = new Redirector();	
-			} else {
-				log.debug('Returning existing instance of Redirector');
-			}
-			return Redirector.instance.QueryInterface(iid);
-		}
 	}
 };
-
-if (XPCOMUtils.generateNSGetFactory)
-    var NSGetFactory = XPCOMUtils.generateNSGetFactory([Redirector]);
-else
-    var NSGetModule = XPCOMUtils.generateNSGetModule([Redirector]);

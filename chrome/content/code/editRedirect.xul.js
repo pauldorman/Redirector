@@ -1,7 +1,4 @@
-//// $Id: editRedirect.xul.js 294 2009-11-11 07:59:43Z einar@einaregilsson.com $
-Components.utils.import("resource://redirector-modules/utils.js");
-Components.utils.import("resource://redirector-modules/redirectorprefs.js");
-Components.utils.import("resource://redirector-modules/redirect.js");
+//// $Id$
 
 var EditRedirect = {
 	txtExampleUrl : null,
@@ -48,12 +45,14 @@ var EditRedirect = {
 			if (!result.isMatch) {
 				title = this.strings.getString('warningExampleUrlDoesntMatchPatternTitle');
 				msg = this.strings.getString('warningExampleUrlDoesntMatchPattern');
-				var rv = PromptService.confirmEx(window, title, msg, PromptService.STD_YES_NO_BUTTONS, PromptService.BUTTON_TITLE_YES, PromptService.BUTTON_TITLE_NO, null, null, {});				
+				var ps = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+				var rv = ps.confirmEx(window, title, msg, ps.STD_YES_NO_BUTTONS, ps.BUTTON_TITLE_YES, ps.BUTTON_TITLE_NO, null, null, {});				
 				return rv == 0;
 			} else {
 				var resultUrl = result.redirectTo;
 				if (!resultUrl.match(/https?:/)) {
-					var uri = IOService.newURI(args.redirect.exampleUrl, null, null); 
+					var ioService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
+					var uri = ioService.newURI(args.redirect.exampleUrl, null, null); 
 					resultUrl = uri.resolve(resultUrl);
 				} 
 		
@@ -70,7 +69,9 @@ var EditRedirect = {
 	},
 
 	msgBox : function(title, text) {
-		PromptService.alert(window, title, text);
+		Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+			.getService(Components.interfaces.nsIPromptService)
+				.alert(window, title, text);
 	},
 	
 	saveValues : function(redirect) {

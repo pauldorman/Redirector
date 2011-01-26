@@ -4,9 +4,7 @@ locale  redirector en-US   file:chrome/locale/en-US/
 locale  redirector zh-CN   file:chrome/locale/zh-CN/
 skin    redirector classic/1.0 file:chrome/skin/
 
-overlay chrome://browser/content/browser.xul    chrome://redirector/content/browserOverlay.xul
-
-resource redirector-modules modules/
+overlay chrome://browser/content/browser.xul    chrome://redirector/content/ui/browserOverlay.xul
 
 #FF4 registration
 interfaces components/rdIMatchResult.xpt

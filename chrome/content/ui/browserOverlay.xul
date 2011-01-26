@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- $Id: browserOverlay.xul 304 2009-11-14 06:36:38Z einar@einaregilsson.com $ -->
+<!-- $Id$ -->
 <!DOCTYPE overlay SYSTEM "chrome://redirector/locale/browserOverlay.xul.dtd">
 <overlay id="redirector-overlay"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-  <script src="redirect.js"/>
-  <script src="code/redirectorprefs.js"/>
-  <script src="browserOverlay.xul.js"/>
+  <script src="../code/redirect.js"/>
+  <script src="../code/redirectorprefs.js"/>
+  <script src="../code/browserOverlay.xul.js"/>
 
   <stringbundleset id="stringbundleset">
     <stringbundle id="redirector-strings" src="chrome://redirector/locale/redirector.properties"/>

@@ -1,11 +1,9 @@
-// $Id: settings.xul.js 345 2009-12-21 21:40:09Z einar@einaregilsson.com $
-
-Components.utils.import("resource://redirector-modules/utils.js");
-Components.utils.import("resource://redirector-modules/redirectorprefs.js");
-Components.utils.import("resource://redirector-modules/redirect.js");
-
+// $Id$
 
 var Redirector = Components.classes["@einaregilsson.com/redirector;1"].getService(Components.interfaces.rdIRedirector);
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+const nsLocalFile = Components.Constructor("@mozilla.org/file/local;1", "nsILocalFile", "initWithPath");
 
 var Settings = {
 
@@ -141,7 +139,7 @@ var Settings = {
 	
 	addRedirect : function() {
 		var args = { saved : false, redirect : new Redirect() };
-		window.openDialog("chrome://redirector/content/editRedirect.xul", "redirect", "chrome,dialog,modal,centerscreen", args);
+		window.openDialog("chrome://redirector/content/ui/editRedirect.xul", "redirect", "chrome,dialog,modal,centerscreen", args);
 		if (args.saved) {
 			Redirector.addRedirect(args.redirect);
 			//Get it from redirector since it has processed it and it's no longer the same
@@ -163,7 +161,7 @@ var Settings = {
 		}
 		var redirect = listItem.item;
 		var args = { saved: false, "redirect":redirect.clone()};
-		window.openDialog("chrome://redirector/content/editRedirect.xul", "redirect", "chrome,dialog,modal,centerscreen", args);
+		window.openDialog("chrome://redirector/content/ui/editRedirect.xul", "redirect", "chrome,dialog,modal,centerscreen", args);
 
 		if (args.saved) {
 			redirect.copyValues(args.redirect);
@@ -182,7 +180,7 @@ var Settings = {
 		
 		var text = this.strings.getString("deleteConfirmationText");
 		var title = this.strings.getString("deleteConfirmationTitle");
-		var reallyDelete = PromptService.confirm(null, title, text);
+		var reallyDelete = Cc["@mozilla.org/embedcomp/prompt-service;1"].getService(Ci.nsIPromptService).confirm(null, title, text);
 		if (!reallyDelete) {
 			return;
 		}		
@@ -219,11 +217,12 @@ var Settings = {
 
 	getFile : function(captionKey, mode) {
 		//Mostly borrowed from Adblock Plus
-		var picker = new FilePicker(window, this.strings.getString(captionKey), mode);
+		var picker = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
+		picker.init(window, this.strings.getString(captionKey), mode);
 		picker.defaultExtension = ".rdx";
 		var dir = this.prefs.defaultDir;
 		if (dir) {
-			picker.displayDirectory = new LocalFile(dir);
+			picker.displayDirectory = new nsLocalFile(dir);
 		}
 		picker.appendFilter(this.strings.getString('redirectorFiles'), '*.rdx');
 		
@@ -235,14 +234,14 @@ var Settings = {
 	},
 	
 	export : function() {
-		var file = this.getFile('exportCaption', nsIFilePicker.modeSave);
+		var file = this.getFile('exportCaption', Ci.nsIFilePicker.modeSave);
 		if (file) {
 			Redirector.exportRedirects(file);
 		}
 	},
 	
 	import : function() {
-		var file = this.getFile('importCaption', nsIFilePicker.modeOpen);
+		var file = this.getFile('importCaption', Ci.nsIFilePicker.modeOpen);
 		var result;
 		if (!file) {
 			return;
@@ -266,7 +265,7 @@ var Settings = {
 		}
 
 		var title = this.strings.getString("importResult");
-		PromptService.alert(null, title, msg);
+		Cc["@mozilla.org/embedcomp/prompt-service;1"].getService(Ci.nsIPromptService).alert(null, title, msg);
 
 		if (imported > 0) {
 			var newlist = [];
